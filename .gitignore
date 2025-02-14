@@ -180,3 +180,5 @@ examples/
 database.db
 
 async_test.py
+
+config.py

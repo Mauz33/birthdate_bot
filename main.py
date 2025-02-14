@@ -2,13 +2,14 @@ import asyncio
 import logging
 import re
 from datetime import datetime as dt
+from config import TOKEN
 
 from telegram import ForceReply, Update, ReplyKeyboardMarkup, InlineKeyboardMarkup, InlineKeyboardButton, \
     ReplyKeyboardRemove, Bot
 from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, filters, ConversationHandler, \
     CallbackQueryHandler
 
-from db_interact import reg_user, add_birth, get_births_by_chat_id, check_is_user_own_row, delete_birth_row
+from db_interact import reg_user, add_birth, get_births_by_chat_id, check_is_user_own_row, delete_birth_row, get_rows_the_next_n_days
 
 # Enable logging
 logging.basicConfig(
@@ -22,7 +23,7 @@ logger = logging.getLogger(__name__)
 MENU, INPUT_DATE, INPUT_CELEBRANT, CONFIRMATION, DELETE_BIRTH = range(5)
 
 reply_keyboard = [
-    ["Новая запись"],
+    ["Новая запись", "Список на 30 дней"],
     ["Посмотреть все записи", "Удалить запись"]
 ]
 
@@ -84,14 +85,17 @@ def is_int(val):
 
 
 async def get_all_rows(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    tuples = get_births_by_chat_id(update.message.chat.id)
-    if len(tuples) == 0:
+    grouped_rows = get_births_by_chat_id(update.message.chat.id)
+    if len(grouped_rows) == 0:
         await update.message.reply_text("Список пуст")
         return MENU
 
     res = ''
-    for x in tuples:
-        res += f"Дата: {x[3]}.{x[4]}" + (f'.{x[5]}' if x[5] != 'NULL' and '' else '') + f". Имя: {x[1]}." + f' Id: {x[0]} ' + '\n'
+    for month, itms in grouped_rows.items():
+        res += f'Месяц: {month}\n'
+        for item in itms:
+            res += f"Дата: {item['day']}.{item['month']}" + (f'.{item["year"]}' if item["year"] != 'NULL' and '' else '') + f". Имя: {item['celebrant_name']}." + f' Id: {item["id"]} ' + '\n'
+        res += '\n'
 
     await update.message.reply_text(res)
     return MENU
@@ -181,11 +185,27 @@ def is_valid_date(date_str):
     except ValueError:
         return False
 
+async def get_list_of_the_next_30_days(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    chat_id = update.message.chat.id
+    arr = get_rows_the_next_n_days(chat_id, next_n_days=30)
+
+    if len(arr) == 0:
+        await update.message.reply_text("Список пуст")
+        return MENU
+
+    res = ''
+    for item in arr:
+        res += f"Дата: {item['nearest_date']}. Имя: {item['celebrant_name']}. Через: {int(item['days_until'])} дней\n"
+
+    await update.message.reply_text(res)
+    return MENU
+
+
 async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE):
    await update.message.reply_text("Нераспознанная команда, используйте /start для начала работы")
 
 def main() -> None:
-    application = Application.builder().token("TOKEN").build()
+    application = Application.builder().token(TOKEN).build()
 
     # on different commands - answer in Telegram
 
@@ -195,7 +215,8 @@ def main() -> None:
             MENU: [
                 MessageHandler(filters.Regex("^Новая запись$"), add_birth_command),
                 MessageHandler(filters.Regex("^Посмотреть все записи$"), get_all_rows),
-                MessageHandler(filters.Regex("^Удалить запись$"), delete_birth)
+                MessageHandler(filters.Regex("^Удалить запись$"), delete_birth),
+                MessageHandler(filters.Regex("^Список на 30 дней$"), get_list_of_the_next_30_days)
             ],
             INPUT_DATE: [MessageHandler(filters.TEXT, input_date)],
             INPUT_CELEBRANT: [MessageHandler(filters.TEXT, input_celebrant)],
