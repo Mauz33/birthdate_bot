@@ -17,7 +17,7 @@ columns = ["date_of_birth_id", "chat_id", "celebrant_name", "day_month", "neares
 # TODO: перенести sql
 async def send_notifications(notifications):
     today = datetime.now().strftime("%Y-%m-%d")
-    async with Bot("7326645467:AAEyzGJh_Et1ceYuxZezhsdQKxlL5zD3TaI") as bot:
+    async with Bot("TOKEN") as bot:
         for chat_id, messages in notifications.items():
             for msg in messages:
                 await bot.send_message(chat_id=chat_id, text=msg['message'])
