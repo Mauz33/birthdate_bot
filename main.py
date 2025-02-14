@@ -185,7 +185,7 @@ async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE):
    await update.message.reply_text("Нераспознанная команда, используйте /start для начала работы")
 
 def main() -> None:
-    application = Application.builder().token("7326645467:AAEyzGJh_Et1ceYuxZezhsdQKxlL5zD3TaI").build()
+    application = Application.builder().token("TOKEN").build()
 
     # on different commands - answer in Telegram
 
