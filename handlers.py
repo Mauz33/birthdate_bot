@@ -116,6 +116,7 @@ async def confirm(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         if res:
             notifications = generate_messages_per_user_id(res)
             await send_notifications(notifications)
+            break
 
     await query.answer()  # Закрываем всплывающее уведомление
 

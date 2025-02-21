@@ -8,12 +8,11 @@ from db_interact import save_notification, get_none_notified_birthdate_in_interv
     fill_last_launch_log
 
 async def send_notifications(notifications: dict[str, list[dict]]):
-    today = datetime.now().strftime("%Y-%m-%d")
     async with Bot(TOKEN) as bot:
         for chat_id, messages in notifications.items():
             for msg in messages:
                 await bot.send_message(chat_id=chat_id, text=msg['message'])
-                await save_notification(msg['date_of_birth_id'], today)
+                await save_notification(msg['date_of_birth_id'])
 
 #   "chat_id" : [ msg, msg ]
 def generate_messages_per_user_id(grouped: dict[str, list[dict]]) -> dict[str, list[dict]]:
@@ -28,7 +27,7 @@ def generate_messages_per_user_id(grouped: dict[str, list[dict]]) -> dict[str, l
                 sub_msg = f'Через {int(x["days_until"])} дней'
             msg = f'{sub_msg} ({x["day_month"]}) день рождения {x["celebrant_name"]}. Исполняется: '
 
-            if x['year'] != None and x['year'].lower != 'null' and x['year'] != '':
+            if x['year'] != None and x['year'].lower() != 'null' and x['year'] != '':
                 msg += f'{datetime.now().year - int(x["year"])}'
             else:
                 msg += ' неизвестно'
@@ -36,7 +35,6 @@ def generate_messages_per_user_id(grouped: dict[str, list[dict]]) -> dict[str, l
             notifications[chat_id].append({"message": msg, "date_of_birth_id": x["date_of_birth_id"]})
 
     return notifications
-
 
 
 async def process_birth_dates(interval_from: int, interval_to: int) -> None:

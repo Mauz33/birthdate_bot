@@ -182,3 +182,7 @@ database.db
 async_test.py
 
 config.py
+
+Initial_db_data.py
+
+postgres_test.py
