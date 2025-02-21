@@ -1,7 +1,7 @@
 import re
 from datetime import datetime as dt
 
-async def is_int(val):
+def is_int(val):
     try:
         num = int(val)
         return True

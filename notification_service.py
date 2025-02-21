@@ -5,14 +5,14 @@ from config import TOKEN
 from telegram import Bot
 
 from db_interact import save_notification, get_none_notified_birthdate_in_interval, get_missed_births, \
-    fill_last_launch_log
+    fill_last_launch_log, DBService, get_db_instance
 
-async def send_notifications(notifications: dict[str, list[dict]]):
+async def send_notifications(db_instance: DBService, notifications: dict[str, list[dict]]):
     async with Bot(TOKEN) as bot:
         for chat_id, messages in notifications.items():
             for msg in messages:
                 await bot.send_message(chat_id=chat_id, text=msg['message'])
-                await save_notification(msg['date_of_birth_id'])
+                await save_notification(db_instance=db_instance, date_of_birth_id=msg['date_of_birth_id'])
 
 #   "chat_id" : [ msg, msg ]
 def generate_messages_per_user_id(grouped: dict[str, list[dict]]) -> dict[str, list[dict]]:
@@ -37,18 +37,18 @@ def generate_messages_per_user_id(grouped: dict[str, list[dict]]) -> dict[str, l
     return notifications
 
 
-async def process_birth_dates(interval_from: int, interval_to: int) -> None:
-    grouped = await get_none_notified_birthdate_in_interval(interval_from=interval_from, interval_to=interval_to)
+async def process_birth_dates(db_instance: DBService, interval_from: int, interval_to: int) -> None:
+    grouped = await get_none_notified_birthdate_in_interval(db_instance=db_instance, interval_from=interval_from, interval_to=interval_to)
 
     notifications = generate_messages_per_user_id(grouped)
 
-    await send_notifications(notifications)
+    await send_notifications(db_instance=db_instance, notifications=notifications)
 
 
-async def process_missed_birth_dates():
-    grouped = await get_missed_births()
+async def process_missed_birth_dates(db_instance: DBService):
+    grouped = await get_missed_births(db_instance=db_instance)
     missed = generate_missed_messages_per_user_id(grouped)
-    await send_notifications(missed)
+    await send_notifications(db_instance=db_instance, notifications=missed)
 
 
 def generate_missed_messages_per_user_id(grouped):
@@ -64,18 +64,20 @@ def generate_missed_messages_per_user_id(grouped):
 
     return notifications
 
-async def process_all_intervals():
-    await process_birth_dates(8, 14)
-    await process_birth_dates(4, 7)
-    await process_birth_dates(1, 3)
-    await process_birth_dates(0, 0)
+async def process_all_intervals(db_instance: DBService):
+    intervals = [[0, 0], [1, 3], [4, 7], [8, 14]]
+    for interval in intervals:
+        await process_birth_dates(db_instance=db_instance, interval_from=interval[0], interval_to=interval[1])
+
 
 async def main():
-    await process_missed_birth_dates()
+    db_instance = get_db_instance()
 
-    await process_all_intervals()
+    await process_missed_birth_dates(db_instance=db_instance)
 
-    await fill_last_launch_log()
+    await process_all_intervals(db_instance=db_instance)
+
+    await fill_last_launch_log(db_instance=db_instance)
 
 
 if __name__ == "__main__":

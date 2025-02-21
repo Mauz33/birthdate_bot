@@ -5,103 +5,130 @@ import psycopg2 as psycopg2
 
 from utils import convert_tuple_to_dict_with_custom_columns
 
-try:
-    connection = psycopg2.connect(
-        host="localhost",
-        port="5432",
-        database="birth_bot",
-        user="postgres",
-        password="mysecretpassword")
 
-    cur = connection.cursor()
-    cur.execute("SELECT 1")
-    rows = cur.fetchall()
-    print("Database connected successfully")
+class DBService:
+    def __init__(self, **kwargs):
+        """Создает подключение к БД"""
+        self.conn = psycopg2.connect(**kwargs)
+        self.cur = self.conn.cursor()
 
-except:
-    print("Database not connected successfully")
+    def execute_query(self, query: str, params=None):
+        """Выполняет запрос и коммитит изменения, если нужно"""
+        self.cur.execute(query, params or ()) # если используется returning
+        self.conn.commit()
 
-async def reg_user(chat_id: int):
+    def fetch_all(self, query: str, params=None):
+        """Выполняет SELECT-запрос и возвращает все результаты"""
+        self.cur.execute(query, params or ())
+        return self.cur.fetchall()
+
+    def fetch_one(self, query: str, params=None):
+        """Выполняет SELECT-запрос и возвращает одну строку"""
+        self.cur.execute(query, params or ())
+        return self.cur.fetchone()
+
+    def close(self):
+        """Закрывает соединение"""
+        self.cur.close()
+        self.conn.close()
+
+
+__db_instance: DBService = None
+
+def configure_db_instance():
+    try:
+        con_dict = {
+            "host": "localhost",
+            "port": "5432",
+            "database": "birth_bot",
+            "user": "postgres",
+            "password": "mysecretpassword"
+        }
+        global __db_instance
+        __db_instance = DBService(**con_dict)
+        print("Database connected successfully")
+
+    except:
+        print("Database not connected successfully")
+
+
+def get_db_instance():
+    configure_db_instance()
+    if __db_instance:
+        return __db_instance
+    else:
+        print(f"In first call {configure_db_instance.__name__}")
+
+async def reg_user(db_instance: DBService, chat_id: int):
     query = f"""
     SELECT COUNT(*) FROM users 
     WHERE chat_id = {chat_id}"""
-    cur.execute(query)
 
-    res = cur.fetchone()
+    res = db_instance.fetch_one(query)
 
     if res[0] == 0:
-        cur.execute(f"""
+        db_instance.execute_query(f"""
         insert into users (chat_id) 
         values ({chat_id});""")
-        connection.commit()
 
 
-async def add_birth(chat_id: int, celebrant: str, date: str) -> int:
-    cur.execute(f"""
+async def add_birth(db_instance: DBService, chat_id: int, celebrant: str, date: str) -> int:
+    res = db_instance.fetch_one(f"""
     SELECT id FROM users 
     WHERE chat_id = {chat_id}""")
-
-    res = cur.fetchone()
 
     user_id = res[0]
 
     if user_id:
-        cur.execute(f"""
+        db_instance.execute_query(f"""
         insert into date_of_births 
         (celebrant_name, day, month, year, user_id) 
         values (%s, %s, %s, %s, %s) RETURNING id;""",
                     (celebrant, date[0], date[1], date[2], user_id))
 
-        row_id = cur.fetchone()[0]
-        connection.commit()
+        row_id = db_instance.cur.fetchone()[0]
+        # connection.commit()
 
         return row_id
 
 
-
 columns_1 = ["id", "celebrant_name", "user_id", "day", "month", "year"]
-async def get_births_by_chat_id(chat_id: int) -> dict[str, list[dict]]:
-    cur.execute(f"""
+async def get_births_by_chat_id(db_instance: DBService, chat_id: int) -> dict[str, list[dict]]:
+    fetched_user_id_query = db_instance.fetch_one(f"""
     SELECT id FROM users 
     WHERE chat_id = {chat_id}""")
-
-    fetched_user_id_query = cur.fetchone()
 
     grouped = {}
     if fetched_user_id_query:
         user_id = fetched_user_id_query[0]
-        cur.execute(f"""
+        fetched_date_of_births = db_instance.fetch_all(f"""
         SELECT * FROM date_of_births 
         WHERE user_id = {user_id} 
         ORDER BY month, day""")
 
-        fetched_date_of_births = cur.fetchall()
-
-        grouped = await convert_tuple_to_dict_with_custom_columns(query=fetched_date_of_births, columns=columns_1, key_index=columns_1.index('month'))
+        grouped = await convert_tuple_to_dict_with_custom_columns(query=fetched_date_of_births, columns=columns_1,
+                                                                  key_index=columns_1.index('month'))
 
     return grouped
 
 
-async def check_is_user_own_row(chat_id: int, row_id: int) -> bool:
-    cur.execute(f"""
+async def check_is_user_own_row(db_instance: DBService, chat_id: int, row_id: int) -> bool:
+    fetched_is_owner = db_instance.fetch_one(f"""
     SELECT COUNT() FROM date_of_births as d 
     JOIN main.users as u on u.id = d.user_id 
     where d.id = {row_id} and u.chat_id = {chat_id}""")
 
-    fetched_is_owner = cur.fetchone()
-
     return True if fetched_is_owner[0] == 1 else False
 
 
-async def delete_birth_row(row_id: int) -> None:
-    query = cur.execute(f"""
+async def delete_birth_row(db_instance: DBService, row_id: int) -> None:
+    db_instance.execute_query(f"""
         DELETE FROM date_of_births WHERE id = {row_id}""")
 
 
-
 columns_2 = ["id", "celebrant_name", "nearest_date", "days_until"]
-async def get_rows_the_next_n_days(chat_id: int, next_n_days: int) -> list[dict]:
-    cur.execute(
+async def get_rows_the_next_n_days(db_instance: DBService, chat_id: int, next_n_days: int) -> list[dict]:
+    res = db_instance.fetch_all(
         f"""
         WITH births as (
             select
@@ -127,8 +154,6 @@ async def get_rows_the_next_n_days(chat_id: int, next_n_days: int) -> list[dict]
         """
     )
 
-    res = cur.fetchall()
-
     arr = []
     for x in res:
         arr.append(dict(zip(columns_2, x)))
@@ -136,19 +161,21 @@ async def get_rows_the_next_n_days(chat_id: int, next_n_days: int) -> list[dict]
     return arr
 
 
-async def save_notification(date_of_birth_id: int) -> None:
-    cur.execute(
+async def save_notification(db_instance: DBService, date_of_birth_id: int) -> None:
+    db_instance.execute_query(
         f"""
             insert into notified_birth_dates (date_of_birth_id, notify_date)
             values ({date_of_birth_id}, current_timestamp);
         """
     )
-    connection.commit()
 
 
 columns_3 = ["date_of_birth_id", "chat_id", "celebrant_name", "day_month", "year", "nearest_date", "days_until"]
-async def get_none_notified_birthdate_in_interval(interval_from: int, interval_to: int) -> dict[str, list[dict]]:
-    cur.execute(
+
+
+async def get_none_notified_birthdate_in_interval(db_instance: DBService, interval_from: int, interval_to: int) -> dict[
+    str, list[dict]]:
+    fetched_non_notified_dates_in_interval = db_instance.fetch_all(
         f"""
             WITH dates as (
             select
@@ -185,15 +212,16 @@ async def get_none_notified_birthdate_in_interval(interval_from: int, interval_t
          """
     )
 
-    fetched_non_notified_dates_in_interval = cur.fetchall()
-
-    grouped = await convert_tuple_to_dict_with_custom_columns(query=fetched_non_notified_dates_in_interval, columns=columns_3,
-                                                        key_index=columns_3.index('chat_id'))
+    grouped = await convert_tuple_to_dict_with_custom_columns(query=fetched_non_notified_dates_in_interval,
+                                                              columns=columns_3,
+                                                              key_index=columns_3.index('chat_id'))
 
     return grouped
 
-async def get_concrete_none_notified_birthdate_in_interval(interval_from: int, interval_to: int, birth_date_id: int):
-    cur.execute(
+
+async def get_concrete_none_notified_birthdate_in_interval(db_instance: DBService, interval_from: int, interval_to: int,
+                                                           birth_date_id: int):
+    fetched_date = db_instance.fetch_all(
         f"""
                 WITH specific_date as (
                 SELECT
@@ -230,8 +258,6 @@ async def get_concrete_none_notified_birthdate_in_interval(interval_from: int, i
                 """
     )
 
-    fetched_date = cur.fetchall()
-
     grouped = await convert_tuple_to_dict_with_custom_columns(query=fetched_date, columns=columns_3,
                                                               key_index=columns_3.index('chat_id'))
 
@@ -240,17 +266,13 @@ async def get_concrete_none_notified_birthdate_in_interval(interval_from: int, i
 
 # NOTE: ДЕБАЖНЫЙ КОД С ИНТЕРВАЛ +1 МЕСЯЦ.  ... < current_date + interval '1 month'
 columns_4 = ["date_of_birth_id", "chat_id", "celebrant_name", "date", "days_ago"]
-async def get_missed_births():
-    cur.execute("SELECT max(e.date) from execution_logs as e")
-
-    fetched_last_launch_date = cur.fetchone()
-
+async def get_missed_births(db_instance: DBService):
+    fetched_last_launch_date = db_instance.fetch_one("SELECT max(e.date) from execution_logs as e")
     last_launch_obj = fetched_last_launch_date[0]
     if not last_launch_obj:
         last_launch_obj = dt.now()
 
     last_launch = dt.strftime(last_launch_obj, '%Y-%m-%d')
-
 
     # TODO: для простоты и отсутсвия спама с опорой на реальность, что сервер не будет лежать
     #  большего года - обрабатывается год последнего запуска и текущий год (для обработки перехода между годами) для поиска пропущенных уведомлений
@@ -287,21 +309,18 @@ async def get_missed_births():
             WHERE bday_this_year > '{last_launch}'::date AND bday_this_year < current_date AND (nbd.notify_date is null or nbd.notify_date < bday_this_year);
             """
 
-    cur.execute(sql_q)
-
-    fetched_missed_dates = cur.fetchall()
+    fetched_missed_dates = db_instance.fetch_all(sql_q)
 
     grouped = await convert_tuple_to_dict_with_custom_columns(query=fetched_missed_dates, columns=columns_4,
-                                                        key_index=columns_4.index('chat_id'))
+                                                              key_index=columns_4.index('chat_id'))
 
     return grouped
 
 
-async def fill_last_launch_log():
-    cur.execute(
+async def fill_last_launch_log(db_instance: DBService):
+    db_instance.execute_query(
         f"""
     insert into execution_logs
     (date) 
     values (current_timestamp);
     """, )
-    connection.commit()

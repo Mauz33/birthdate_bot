@@ -2,16 +2,18 @@ from telegram import Update, ReplyKeyboardRemove, InlineKeyboardButton, InlineKe
 from telegram.ext import ContextTypes, ConversationHandler
 
 from db_interact import reg_user, get_births_by_chat_id, delete_birth_row, check_is_user_own_row, add_birth, \
-    get_rows_the_next_n_days, get_concrete_none_notified_birthdate_in_interval
+    get_rows_the_next_n_days, get_concrete_none_notified_birthdate_in_interval, \
+    get_db_instance, DBService
 from key_boards import markup, cancel_markup
 from notification_service import generate_messages_per_user_id, send_notifications
 from utils import is_int, is_valid_date, generate_own_birth_dates_info, generate_next_30_days_info
 
 MENU, INPUT_DATE, INPUT_CELEBRANT, CONFIRMATION, DELETE_BIRTH = range(5)
 
+db_instance: DBService = get_db_instance()
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    await reg_user(update.message.chat.id)
+    await reg_user(db_instance=db_instance, chat_id=update.message.chat.id)
     await update.message.reply_text("Начало работы.", reply_markup=markup)
 
     return MENU
@@ -39,8 +41,8 @@ async def execute_delete(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                                         reply_markup=cancel_markup)
         return DELETE_BIRTH
 
-    if check_is_user_own_row(chat_id, int(row_id)):
-        await delete_birth_row(int(row_id))
+    if await check_is_user_own_row(db_instance=db_instance, chat_id=chat_id, row_id=int(row_id)):
+        await delete_birth_row(db_instance=db_instance, row_id=int(row_id))
         await update.message.reply_text(f"Запись с ID {row_id} успешно удалена",
                                         reply_markup=markup)
     else:
@@ -52,7 +54,7 @@ async def execute_delete(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
 
 async def get_all_rows(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    grouped_rows = await get_births_by_chat_id(update.message.chat.id)
+    grouped_rows = await get_births_by_chat_id(db_instance=db_instance, chat_id=update.message.chat.id)
     if len(grouped_rows) == 0:
         await update.message.reply_text("Список пуст")
         return MENU
@@ -107,15 +109,16 @@ async def confirm(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     chat_id = query.message.chat.id
     date = context.user_data["birth_date"].split('.')
     res = date if len(date) == 3 else date + ["NULL"]
-    birth_id = await add_birth(chat_id, context.user_data["celebrant"], res)
+    birth_id = await add_birth(db_instance=db_instance, chat_id=chat_id, celebrant=context.user_data["celebrant"], date=res)
 
     intervals = [[0, 0], [1, 3], [4, 7], [8, 14]]
     for interval in intervals:
-        res = await get_concrete_none_notified_birthdate_in_interval(interval_from=interval[0], interval_to=interval[1],
+        res = await get_concrete_none_notified_birthdate_in_interval(db_instance=db_instance, interval_from=interval[0],
+                                                                     interval_to=interval[1],
                                                                      birth_date_id=birth_id)
         if res:
             notifications = generate_messages_per_user_id(res)
-            await send_notifications(notifications)
+            await send_notifications(db_instance=db_instance, notifications=notifications)
             break
 
     await query.answer()  # Закрываем всплывающее уведомление
@@ -148,7 +151,7 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 
 async def get_list_of_the_next_30_days(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     chat_id: int = update.message.chat.id
-    arr: list[dict] = await get_rows_the_next_n_days(chat_id=chat_id, next_n_days=30)
+    arr: list[dict] = await get_rows_the_next_n_days(db_instance=db_instance, chat_id=chat_id, next_n_days=30)
 
     if len(arr) == 0:
         await update.message.reply_text("Список пуст")
