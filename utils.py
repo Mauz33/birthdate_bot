@@ -8,7 +8,7 @@ def is_int(val):
     except (TypeError, ValueError):
         return False
 
-async def is_valid_date(date_str):
+def is_valid_date(date_str):
     # Проверяем, что строка соответствует формату дд.мм.гггг
     date_pattern = r"^\d{2}\.\d{2}(\.\d{4})?$"
     if not re.match(date_pattern, date_str):

@@ -2,8 +2,8 @@ from telegram import Update, ReplyKeyboardRemove, InlineKeyboardButton, InlineKe
 from telegram.ext import ContextTypes, ConversationHandler
 
 from db_interact import reg_user, get_births_by_chat_id, delete_birth_row, check_is_user_own_row, add_birth, \
-    get_rows_the_next_n_days, get_concrete_none_notified_birthdate_in_interval, \
-    get_db_instance, DBService
+    get_rows_the_next_n_days, \
+    get_db_instance, DBService, get_none_notified_birthdate_in_interval
 from key_boards import markup, cancel_markup
 from notification_service import generate_messages_per_user_id, send_notifications
 from utils import is_int, is_valid_date, generate_own_birth_dates_info, generate_next_30_days_info
@@ -76,7 +76,7 @@ async def add_birth_command(update: Update, context: ContextTypes.DEFAULT_TYPE) 
 
 async def input_date(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     date = update.message.text
-    if not await is_valid_date(date):
+    if not is_valid_date(date):
         await update.message.reply_text(
             "Неверный формат даты. Пожалуйста, введите дату в формате ДД.ММ или ДД.ММ.ГГГГ.",
             reply_markup=cancel_markup)
@@ -113,7 +113,7 @@ async def confirm(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 
     intervals = [[0, 0], [1, 3], [4, 7], [8, 14]]
     for interval in intervals:
-        res = await get_concrete_none_notified_birthdate_in_interval(db_instance=db_instance, interval_from=interval[0],
+        res = await get_none_notified_birthdate_in_interval(db_instance=db_instance, interval_from=interval[0],
                                                                      interval_to=interval[1],
                                                                      birth_date_id=birth_id)
         if res:
