@@ -257,7 +257,7 @@ class TestSql_get_none_notified_birthdate_in_interval:
         res = await get_none_notified_birthdate_in_interval(db_connection, 15, 20, current_date)  # если до др 15-20 дней и в этот же период уже было уведомление, то не получать дату ДО
         assert 10001 not in res
         res = await get_none_notified_birthdate_in_interval(db_connection, 15, 18, current_date) # если до др 15-18 дней и в этот же период еще не было уведомлений, то получить дату ДР
-        assert 10001 not in res
+        assert 10001 in res
 
     @pytest.mark.asyncio
     async def test_get_missed_births(self, db_connection: DBService, clean_db):

@@ -1,6 +1,7 @@
 import datetime
 from datetime import datetime as dt
 
+
 import psycopg2 as psycopg2
 
 from utils import convert_tuple_to_dict_with_custom_columns
@@ -65,27 +66,27 @@ def get_db_instance():
         print(f"In first call {configure_db_instance.__name__}")
 
 async def reg_user(db_instance: DBService, chat_id: int):
-    query = f"""
+    query = """
     SELECT COUNT(*) FROM users 
-    WHERE chat_id = {chat_id}"""
+    WHERE chat_id = %s"""
 
-    res = db_instance.fetch_one(query)
+    res = db_instance.fetch_one(query, (chat_id,))
 
     if res[0] == 0:
-        db_instance.execute_query(f"""
+        db_instance.execute_query("""
         insert into users (chat_id) 
-        values ({chat_id});""")
+        values (%s});""", (chat_id,))
 
 
 async def add_birth(db_instance: DBService, chat_id: int, celebrant: str, date: str) -> int:
-    res = db_instance.fetch_one(f"""
+    res = db_instance.fetch_one("""
     SELECT id FROM users 
-    WHERE chat_id = {chat_id}""")
+    WHERE chat_id = %s""", (chat_id,))
 
     user_id = res[0]
 
     if user_id:
-        db_instance.execute_query(f"""
+        db_instance.execute_query("""
         insert into date_of_births 
         (celebrant_name, day, month, year, user_id) 
         values (%s, %s, %s, %s, %s) RETURNING id;""",
@@ -100,15 +101,15 @@ columns_1 = ["id", "celebrant_name", "user_id", "day", "month", "year"]
 async def get_births_by_chat_id(db_instance: DBService, chat_id: int) -> dict[str, list[dict]]:
     fetched_user_id_query = db_instance.fetch_one(f"""
     SELECT id FROM users 
-    WHERE chat_id = {chat_id}""")
+    WHERE chat_id = %s""", (chat_id,))
 
     grouped = {}
     if fetched_user_id_query:
         user_id = fetched_user_id_query[0]
-        fetched_date_of_births = db_instance.fetch_all(f"""
+        fetched_date_of_births = db_instance.fetch_all("""
         SELECT * FROM date_of_births 
-        WHERE user_id = {user_id} 
-        ORDER BY month, day""")
+        WHERE user_id = %s 
+        ORDER BY month, day""", (user_id,))
 
         grouped = await convert_tuple_to_dict_with_custom_columns(query=fetched_date_of_births, columns=columns_1,
                                                                   key_index=columns_1.index('month'))
@@ -117,23 +118,23 @@ async def get_births_by_chat_id(db_instance: DBService, chat_id: int) -> dict[st
 
 
 async def check_is_user_own_row(db_instance: DBService, chat_id: int, row_id: int) -> bool:
-    fetched_is_owner = db_instance.fetch_one(f"""
+    fetched_is_owner = db_instance.fetch_one("""
     SELECT COUNT(*) FROM date_of_births as d 
     JOIN users as u on u.id = d.user_id 
-    where d.id = {row_id} and u.chat_id = {chat_id}""")
+    where d.id = %s and u.chat_id = %s""", (row_id, chat_id,))
 
     return True if fetched_is_owner[0] == 1 else False
 
 
 async def delete_birth_row(db_instance: DBService, row_id: int) -> None:
-    db_instance.execute_query(f"""
-        DELETE FROM date_of_births WHERE id = {row_id}""")
+    db_instance.execute_query("""
+        DELETE FROM date_of_births WHERE id = %s""", (row_id,))
 
 
 columns_2 = ["id", "celebrant_name", "nearest_date", "days_until"]
 async def get_rows_the_next_n_days(db_instance: DBService, chat_id: int, next_n_days: int, current_date: str = None) -> list[dict]:
     # TODO: добавить проверку на правильность строки
-    current_date = f"'{current_date}'::date" if current_date else 'CURRENT_DATE'
+    # TODO: выкидывать исключение
 
     res = db_instance.fetch_all(
         f"""
@@ -142,9 +143,9 @@ async def get_rows_the_next_n_days(db_instance: DBService, chat_id: int, next_n_
             d.id,
             d.celebrant_name,
             u.chat_id,
-            CASE WHEN CURRENT_DATE > (extract(year from {current_date}) || '-' || d.month || '-' || d.day)::date
-                THEN (extract(year from {current_date} + interval '1 year') || '-' || d.month || '-' || d.day)::date
-                ELSE (extract(year from {current_date}) || '-' || d.month || '-' || d.day)::date
+            CASE WHEN CURRENT_DATE > (extract(year from COALESCE(%s::date, CURRENT_DATE)) || '-' || d.month || '-' || d.day)::date
+                THEN (extract(year from COALESCE(%s::date, CURRENT_DATE) + interval '1 year') || '-' || d.month || '-' || d.day)::date
+                ELSE (extract(year from COALESCE(%s::date, CURRENT_DATE)) || '-' || d.month || '-' || d.day)::date
             END AS nearest_date
             from date_of_births d
             join users u on d.user_id = u.id
@@ -154,11 +155,11 @@ async def get_rows_the_next_n_days(db_instance: DBService, chat_id: int, next_n_
             b.id,
             b.celebrant_name,
             to_char(b.nearest_date, 'mm.dd.YYYY'),
-            b.nearest_date - {current_date} as days_until
+            b.nearest_date - COALESCE(%s::date, CURRENT_DATE) as days_until
         FROM births b
-        where b.chat_id = {chat_id} AND nearest_date - {current_date} between 0 and {next_n_days}
+        where b.chat_id = %s AND nearest_date - COALESCE(%s::date, CURRENT_DATE) between 0 and %s
         ORDER BY days_until
-        """
+        """, (current_date, current_date, current_date, current_date, chat_id, current_date, next_n_days,)
     )
 
     arr = []
@@ -169,26 +170,30 @@ async def get_rows_the_next_n_days(db_instance: DBService, chat_id: int, next_n_
 
 
 async def save_notification(db_instance: DBService, date_of_birth_id: int, current_timestamp: str = None) -> None:
-    # TODO: добавить проверку на правильность строки
-    current_timestamp = f"'{current_timestamp}'::timestamp" if current_timestamp else 'CURRENT_TIMESTAMP'
+    # TODO: добавить проверку на правильность строки исключение
     db_instance.execute_query(
-        f"""
-            insert into notified_birth_dates (date_of_birth_id, notify_date)
-            values ({date_of_birth_id}, {current_timestamp});
         """
+            insert into notified_birth_dates (date_of_birth_id, notify_date)
+            values (%s, COALESCE(%s::timestamp, CURRENT_TIMESTAMP));
+        """, (date_of_birth_id, current_timestamp)
     )
 
 
 columns_3 = ["date_of_birth_id", "chat_id", "celebrant_name", "day_month", "year", "nearest_date", "days_until"]
 async def get_none_notified_birthdate_in_interval(db_instance: DBService, interval_from: int, interval_to: int, current_date: str = None, birth_date_id: int = None) -> dict[
     int, list[dict]]:
-    # TODO: проверить на правильность дату
-    current_date = f"'{current_date}'::date" if current_date else 'CURRENT_DATE'
+    # TODO: проверить на правильность дату исключение
+    current_date = f"{current_date}" if current_date else None
 
-    additional_where_birth_date_id = f"where d.id = {birth_date_id}" if birth_date_id else ''
+    additional_where_birth_date_id = f"where d.id = %s" if birth_date_id else None
+
+    tuple_args = (current_date, current_date, current_date,)
+    if birth_date_id:
+        tuple_args += (birth_date_id,)
+    tuple_args += (current_date, current_date, interval_from, interval_to, interval_from, interval_to,)
 
     fetched_non_notified_dates_in_interval = db_instance.fetch_all(
-        f"""
+        """
             WITH dates as (
             select
             d.id,
@@ -196,14 +201,13 @@ async def get_none_notified_birthdate_in_interval(db_instance: DBService, interv
             d.celebrant_name,
             d.day || '.' || d.month as day_month,
             d.year,
-            make_date(extract(year from {current_date})::int +
-                      case when {current_date} > make_date(extract(year from {current_date})::int, d.month::int, d.day::int)
+            make_date(extract(year from COALESCE(%s::date, CURRENT_DATE))::int +
+                      case when COALESCE(%s::date, CURRENT_DATE) > make_date(extract(year from COALESCE(%s::date, CURRENT_DATE))::int, d.month::int, d.day::int)
                         then 1
                         else 0
                       end, d.month::int, d.day::int
             ) as nearest_date
             FROM date_of_births as d
-            {additional_where_birth_date_id}
         )
         
         SELECT DISTINCT
@@ -213,16 +217,16 @@ async def get_none_notified_birthdate_in_interval(db_instance: DBService, interv
             dt.day_month,
             dt.year,
             dt.nearest_date,
-            dt.nearest_date - {current_date} as days_until
+            dt.nearest_date - COALESCE(%s::date, CURRENT_DATE) as days_until
             FROM dates as dt
         JOIN users u on u.id = dt.user_id
         LEFT JOIN notified_birth_dates nbd on dt.id = nbd.date_of_birth_id
-        where dt.nearest_date - {current_date} BETWEEN {interval_from} AND {interval_to}
+        where dt.nearest_date - COALESCE(%s::date, CURRENT_DATE) BETWEEN %s AND %s
         AND (nbd.notify_date is NULL OR (dt.nearest_date - (select max(n.notify_date)
                                                              from notified_birth_dates as n
                                                              where n.date_of_birth_id = dt.id)::date
-                                            ) NOT BETWEEN {interval_from} AND {interval_to})
-         """
+                                            ) NOT BETWEEN %s AND %s)
+         """, tuple_args
     )
 
     grouped = await convert_tuple_to_dict_with_custom_columns(query=fetched_non_notified_dates_in_interval,
@@ -235,7 +239,7 @@ async def get_none_notified_birthdate_in_interval(db_instance: DBService, interv
 columns_4 = ["date_of_birth_id", "chat_id", "celebrant_name", "date", "days_ago"]
 async def get_missed_births(db_instance: DBService, current_date: str = None):
     # TODO: проверить на правильность дату
-    current_date = f"'{current_date}'::date" if current_date else 'CURRENT_DATE'
+    current_date = f"{current_date}" if current_date else None
 
     fetched_last_launch_date = db_instance.fetch_one("SELECT max(e.date) from execution_logs as e")
     last_launch_obj = fetched_last_launch_date[0]
@@ -254,12 +258,12 @@ async def get_missed_births(db_instance: DBService, current_date: str = None):
                 celebrant_name,
                 day,
                 month,
-                (extract(year from '{last_launch}'::date) || '-' || month || '-' || day)::date AS bday_last_year,
-                (extract(year from {current_date}) || '-' || month || '-' || day)::date AS bday_this_year
+                (extract(year from %s::date) || '-' || month || '-' || day)::date AS bday_last_year,
+                (extract(year from COALESCE(%s::date, CURRENT_DATE)) || '-' || month || '-' || day)::date AS bday_this_year
             FROM date_of_births
             )
         
-            SELECT d.id, u.chat_id, db.celebrant_name, bday_last_year as date, {current_date} - bday_last_year AS days_ago
+            SELECT d.id, u.chat_id, db.celebrant_name, bday_last_year as date, COALESCE(%s::date, CURRENT_DATE) - bday_last_year AS days_ago
             FROM dates d
             LEFT JOIN notified_birth_dates nbd on nbd.date_of_birth_id = d.id
             JOIN date_of_births db on db.id = d.id
@@ -267,19 +271,19 @@ async def get_missed_births(db_instance: DBService, current_date: str = None):
                 -- Нужно получить такие ДР, которые попадают в диапазон между last_launch и сегодня,
                 -- и при left_join либо о них еще не уведомляли ни разу (nbd.notify_date is null) либо дата уведомления
                 -- в диапазоне между last_launch и сегодня меньше, чем дата ДР
-            WHERE bday_last_year > '{last_launch}'::date AND bday_last_year < {current_date} AND (nbd.notify_date is null or nbd.notify_date < bday_last_year)
+            WHERE bday_last_year > %s::date AND bday_last_year < COALESCE(%s::date, CURRENT_DATE) AND (nbd.notify_date is null or nbd.notify_date < bday_last_year)
         
             UNION
         
-            SELECT d.id, u.chat_id, db.celebrant_name, bday_this_year as date, {current_date} - bday_this_year AS days_ago
+            SELECT d.id, u.chat_id, db.celebrant_name, bday_this_year as date, COALESCE(%s::date, CURRENT_DATE) - bday_this_year AS days_ago
             FROM dates d
             LEFT JOIN notified_birth_dates nbd on nbd.date_of_birth_id = d.id
             JOIN date_of_births db on db.id = d.id
             JOIN users u on u.id = db.user_id
-            WHERE bday_this_year > '{last_launch}'::date AND bday_this_year < {current_date} AND (nbd.notify_date is null or nbd.notify_date < bday_this_year);
+            WHERE bday_this_year > %s::date AND bday_this_year < COALESCE(%s::date, CURRENT_DATE) AND (nbd.notify_date is null or nbd.notify_date < bday_this_year);
             """
 
-    fetched_missed_dates = db_instance.fetch_all(sql_q)
+    fetched_missed_dates = db_instance.fetch_all(sql_q, (last_launch, current_date, current_date, last_launch, current_date, current_date, last_launch, current_date))
 
     grouped = await convert_tuple_to_dict_with_custom_columns(query=fetched_missed_dates, columns=columns_4,
                                                               key_index=columns_4.index('chat_id'))
