@@ -3,16 +3,35 @@ from datetime import datetime
 from config import TOKEN
 
 from telegram import Bot
+from telegram.error import TimedOut, NetworkError, RetryAfter
 
 from db_interact import save_notification, get_none_notified_birthdate_in_interval, get_missed_births, \
     fill_last_launch_log, DBService, get_db_instance
 
 async def send_notifications(db_instance: DBService, notifications: dict[str, list[dict]]):
+    retries = 5
+    delay = 2
+
     async with Bot(TOKEN) as bot:
         for chat_id, messages in notifications.items():
             for msg in messages:
-                await bot.send_message(chat_id=chat_id, text=msg['message'])
-                await save_notification(db_instance=db_instance, date_of_birth_id=msg['date_of_birth_id'])
+                try:
+                    for attempt in range(retries):
+                        await bot.send_message(chat_id=chat_id, text=msg['message'])
+                        await save_notification(db_instance=db_instance, date_of_birth_id=msg['date_of_birth_id'])
+                except TimedOut as e:
+                    print(f"Таймаут: {str(e)}")
+                    await asyncio.sleep(delay)
+                except NetworkError as e:
+                    print(f"Ошибка сети: {str(e)}")
+                    await asyncio.sleep(delay)
+                except RetryAfter as e:
+                    wait_time = e.retry_after
+                    print(f"Превышен лимит запросов! Ждём {wait_time} сек")
+                    await asyncio.sleep(wait_time)
+                except Exception as e:
+                    print(f"Неизвестная ошибка: {str(e)}")
+                    break
 
 #   "chat_id" : [ msg, msg ]
 def generate_messages_per_user_id(grouped: dict[str, list[dict]]) -> dict[str, list[dict]]:
