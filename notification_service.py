@@ -92,10 +92,13 @@ async def process_all_intervals(db_instance: DBService):
 async def main():
     db_instance = get_db_instance()
 
+    print("Обработка пропущенных дат")
     await process_missed_birth_dates(db_instance=db_instance)
 
+    print("Обработка наступающих дат")
     await process_all_intervals(db_instance=db_instance)
 
+    print("Заполнение последнего успешного запуска")
     await fill_last_launch_log(db_instance=db_instance)
 
 
