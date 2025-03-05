@@ -75,7 +75,7 @@ async def reg_user(db_instance: DBService, chat_id: int):
     if res[0] == 0:
         db_instance.execute_query("""
         insert into users (chat_id) 
-        values (%s});""", (chat_id,))
+        values (%s);""", (chat_id,))
 
 
 async def add_birth(db_instance: DBService, chat_id: int, celebrant: str, date: str) -> int:
