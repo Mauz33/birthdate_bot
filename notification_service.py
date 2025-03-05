@@ -8,6 +8,8 @@ from telegram.error import TimedOut, NetworkError, RetryAfter
 from db_interact import save_notification, get_none_notified_birthdate_in_interval, get_missed_births, \
     fill_last_launch_log, DBService, get_db_instance
 
+import logging
+
 async def send_notifications(db_instance: DBService, notifications: dict[str, list[dict]]):
     retries = 5
     delay = 2
@@ -90,16 +92,18 @@ async def process_all_intervals(db_instance: DBService):
         await process_birth_dates(db_instance=db_instance, interval_from=interval[0], interval_to=interval[1])
 
 
+logging.basicConfig(level=logging.INFO,
+                    format='%(asctime)s - %(levelname)s - %(message)s')
 async def main():
     db_instance = get_db_instance()
 
-    print("Обработка пропущенных дат")
+    logging.info("Обработка пропущенных дат")
     await process_missed_birth_dates(db_instance=db_instance)
 
-    print("Обработка наступающих дат")
+    logging.info("Обработка наступающих дат")
     await process_all_intervals(db_instance=db_instance)
 
-    print("Заполнение последнего успешного запуска")
+    logging.info("Заполнение последнего успешного запуска")
     await fill_last_launch_log(db_instance=db_instance)
 
 
