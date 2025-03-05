@@ -19,6 +19,7 @@ async def send_notifications(db_instance: DBService, notifications: dict[str, li
                     for attempt in range(retries):
                         await bot.send_message(chat_id=chat_id, text=msg['message'])
                         await save_notification(db_instance=db_instance, date_of_birth_id=msg['date_of_birth_id'])
+                        break
                 except TimedOut as e:
                     print(f"Таймаут: {str(e)}")
                     await asyncio.sleep(delay)
