@@ -19,13 +19,13 @@ jobs:
 
       - name: Create .env file
         run: |
-          echo "POSTGRES_USER=${{ secrets.POSTGRES_USER }}" > .env
-          echo "POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}" >> .env
-          echo "POSTGRES_DB=${{ secrets.POSTGRES_DB }}" >> .env
-          echo "OUTER_PORT=${{ secrets.OUTER_PORT }}" >> .env
+          echo "POSTGRES_USER=${{ secrets.POSTGRES_TEST_USER }}" > .env
+          echo "POSTGRES_PASSWORD=${{ secrets.POSTGRES_TEST_PASSWORD }}" >> .env
+          echo "POSTGRES_DB=${{ secrets.POSTGRES_TEST_DB }}" >> .env
+          echo "OUTER_PORT=${{ secrets.POSTGRES_TEST_OUTER_PORT }}" >> .env
 
       - name: Docker compose Postgres for testing
-        run: docker-compose -f docker-compose.test.yml up -d
+        run: docker compose -f docker-compose.test.yml up -d
 
   Testing:
     runs-on: self-hosted
@@ -35,4 +35,4 @@ jobs:
         run: pytest tests.py
 
       - name: Destroy test-db container
-        run: docker-compose -f docker-compose.test.yml down
+        run: docker compose -f docker-compose.test.yml down
