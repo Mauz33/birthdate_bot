@@ -9,14 +9,6 @@ jobs:
       - name: Check out repository code
         uses: actions/checkout@v4
 
-      - name: Install Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.10.5'
-
-      - name: Install requirements.txt
-        run: pip install -r requirements.txt
-
       - name: Create .env file
         run: |
           echo "POSTGRES_USER=${{ secrets.POSTGRES_TEST_USER }}" > .env
@@ -31,8 +23,13 @@ jobs:
     runs-on: self-hosted
     needs: Preparation
     steps:
-      - name: pwd
-        run: pwd
+      - name: Install Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10.5'
+
+      - name: Install requirements.txt
+        run: pip install -r requirements.txt
         
       - name: Run Tests
         run: python -m pytest tests.py
