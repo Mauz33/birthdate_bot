@@ -1,30 +1,38 @@
 name: GitHub Actions Demo
 run-name: ${{ github.actor }} is testing out GitHub Actions 🚀
 on: [push]
+
 jobs:
-  Explore-GitHub-Actions:
+  Preparation:
     runs-on: self-hosted
     steps:
-      - name: Print secret (temporarily)
-        env:
-          MY_SECRET: ${{ secrets.DOCKER_TEST_PORT }}
-        run: |
-          echo "Secret length: ${#MY_SECRET}"
-      - name: Print secret (temporarily)
-        env:
-          MY_SECRET: ${{ secrets.DOCKER_TEST_PORT }}
-        run: |
-          echo "Secret: ${MY_SECRET}"
-      - run: echo "$SUPER_SECRET"
-      - run: echo "🎉 The job was automatically triggered by a ${{ github.event_name }} event."
-      - run: echo "🐧 This job is now running on a ${{ runner.os }} server hosted by GitHub!"
-      - run: echo "🔎 The name of your branch is ${{ github.ref }} and your repository is ${{ github.repository }}."
       - name: Check out repository code
         uses: actions/checkout@v4
-      - run: echo "💡 The ${{ github.repository }} repository has been cloned to the runner."
-      - run: echo "🖥️ The workflow is now ready to test your code on the runner."
-      - name: List files in the repository
+
+      - name: Create .env file
         run: |
-          ls ${{ github.workspace }}
-      - run: echo "🍏 This job's status is ${{ job.status }}."
-      
+          echo "POSTGRES_USER=${{ secrets.POSTGRES_TEST_USER }}" > .env
+          echo "POSTGRES_PASSWORD=${{ secrets.POSTGRES_TEST_PASSWORD }}" >> .env
+          echo "POSTGRES_DB=${{ secrets.POSTGRES_TEST_DB }}" >> .env
+          echo "OUTER_PORT=${{ secrets.POSTGRES_TEST_OUTER_PORT }}" >> .env
+
+      - name: Docker compose Postgres for testing
+        run: docker compose -f docker-compose.test.yml up -d
+
+  Testing:
+    runs-on: self-hosted
+    needs: Preparation
+    steps:
+      - name: Install Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10.5'
+
+      - name: Install requirements.txt
+        run: pip install -r requirements.txt
+        
+      - name: Run Tests
+        run: pytest tests.py
+
+      - name: Destroy test-db container
+        run: docker compose -f docker-compose.test.yml down
