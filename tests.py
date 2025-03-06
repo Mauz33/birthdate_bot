@@ -6,12 +6,21 @@ from db_interact import DBService, check_is_user_own_row, get_rows_the_next_n_da
     get_none_notified_birthdate_in_interval, save_notification, get_missed_births
 import pytest
 
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+POSTGRES_USER = os.getenv('POSTGRES_USER')
+POSTGRES_PASSWORD = os.getenv('POSTGRES_PASSWORD')
+POSTGRES_DB = os.getenv('POSTGRES_DB')
+OUTER_PORT = os.getenv('OUTER_PORT')
+
 con_dict = {
     "host": "localhost",
-    "port": "5433",
-    "database": "birth_test",
-    "user": "postgres",
-    "password": "mysecretpassword"
+    "port": OUTER_PORT,
+    "database": POSTGRES_DB,
+    "user": POSTGRES_USER,
+    "password": POSTGRES_PASSWORD
 }
 
 @pytest.fixture(scope="session")
