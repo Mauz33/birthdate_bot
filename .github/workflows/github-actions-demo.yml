@@ -31,6 +31,9 @@ jobs:
     runs-on: self-hosted
     needs: Preparation
     steps:
+      - name: which
+        run: which pytest
+        
       - name: Run Tests
         run: pytest tests.py
 
