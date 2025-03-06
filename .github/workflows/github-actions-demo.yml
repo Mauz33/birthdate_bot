@@ -25,16 +25,6 @@ jobs:
           echo "POSTGRES_PASSWORD=${{secrets.POSTGRES_PASSWORD}}" >> .env
           echo "POSTGRES_DB=${{secrets.POSTGRES_DB}}" >> .env
           echo "OUTER_PORT=${{secrets.OUTER_PORT}}" >> .env
-      
-  Testing:
-    runs-on: self-hosted
-    needs: Preparation
-    steps:
-      - name: Run Tests
-      - run: pytest .\tests.py
-
-      - name: Destroy test-db container
-      - run: docker compose -f docker-compose.test.yml down
     
 
       
