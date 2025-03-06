@@ -20,10 +20,11 @@ jobs:
       - run: docker compose -f docker-compose.test.yml up
 
       - name: run 
-      - run: echo "POSTGRES_USER=${{secrets.POSTGRES_USER}}" > .env
-      - run: echo "POSTGRES_PASSWORD=${{secrets.POSTGRES_PASSWORD}}" >> .env
-      - run: echo "POSTGRES_DB=${{secrets.POSTGRES_DB}}" >> .env
-      - run: echo "OUTER_PORT=${{secrets.OUTER_PORT}}" >> .env
+      - run: |
+          echo "POSTGRES_USER=${{secrets.POSTGRES_USER}}" > .env
+          echo "POSTGRES_PASSWORD=${{secrets.POSTGRES_PASSWORD}}" >> .env
+          run: echo "POSTGRES_DB=${{secrets.POSTGRES_DB}}" >> .env
+          run: echo "OUTER_PORT=${{secrets.OUTER_PORT}}" >> .env
       
   Testing:
     runs-on: self-hosted
