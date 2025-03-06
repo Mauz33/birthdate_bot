@@ -35,7 +35,7 @@ jobs:
         run: pwd
         
       - name: Run Tests
-        run: pytest tests.py
+        run: python -m pytest tests.py
 
       - name: Destroy test-db container
         run: docker compose -f docker-compose.test.yml down
