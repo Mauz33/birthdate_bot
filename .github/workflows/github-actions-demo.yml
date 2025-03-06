@@ -5,9 +5,9 @@ jobs:
   Explore-GitHub-Actions:
     runs-on: self-hosted
     steps:
-      - name: secfret
-        env:
-          $SUPER_SECRET: ${{ secrets.DOCKER_TEST_PORT }}
+      - name: Print secret (temporarily)
+        run: |
+          echo "DOCKER PORT is: ${{ secrets.DOCKER_TEST_PORT }}"
       - run: echo "$SUPER_SECRET"
       - run: echo "🎉 The job was automatically triggered by a ${{ github.event_name }} event."
       - run: echo "🐧 This job is now running on a ${{ runner.os }} server hosted by GitHub!"
