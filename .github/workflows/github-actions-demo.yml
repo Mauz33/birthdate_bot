@@ -23,8 +23,8 @@ jobs:
       - run: |
           echo "POSTGRES_USER=${{secrets.POSTGRES_USER}}" > .env
           echo "POSTGRES_PASSWORD=${{secrets.POSTGRES_PASSWORD}}" >> .env
-          run: echo "POSTGRES_DB=${{secrets.POSTGRES_DB}}" >> .env
-          run: echo "OUTER_PORT=${{secrets.OUTER_PORT}}" >> .env
+          echo "POSTGRES_DB=${{secrets.POSTGRES_DB}}" >> .env
+          echo "OUTER_PORT=${{secrets.OUTER_PORT}}" >> .env
       
   Testing:
     runs-on: self-hosted
