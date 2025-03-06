@@ -6,8 +6,10 @@ jobs:
     runs-on: self-hosted
     steps:
       - name: Print secret (temporarily)
+        env:
+          MY_SECRET: ${{ secrets.DOCKER_TEST_PORT }}
         run: |
-          echo "DOCKER PORT is: $(echo -n ${{ secrets.DOCKER_TEST_PORT }} | base64)"
+          echo "Secret length: ${#MY_SECRET}"
       - run: echo "$SUPER_SECRET"
       - run: echo "🎉 The job was automatically triggered by a ${{ github.event_name }} event."
       - run: echo "🐧 This job is now running on a ${{ runner.os }} server hosted by GitHub!"
