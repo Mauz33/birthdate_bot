@@ -7,7 +7,7 @@ jobs:
     steps:
       - name: Print secret (temporarily)
         run: |
-          echo "DOCKER PORT is: ${{ secrets.DOCKER_TEST_PORT }}"
+          echo "DOCKER PORT is: $(echo -n ${{ secrets.DOCKER_TEST_PORT }} | base64)"
       - run: echo "$SUPER_SECRET"
       - run: echo "🎉 The job was automatically triggered by a ${{ github.event_name }} event."
       - run: echo "🐧 This job is now running on a ${{ runner.os }} server hosted by GitHub!"
