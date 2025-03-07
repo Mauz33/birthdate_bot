@@ -56,4 +56,4 @@ jobs:
       - name: Down active app
         run: docker compose -f ./docker-compose.app.yml down
       - name: Compose whole app
-        run: docker compose -f ./docker-compose.app.yml up
+        run: docker compose -f ./docker-compose.app.yml up -d
