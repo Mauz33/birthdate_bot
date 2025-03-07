@@ -36,7 +36,7 @@ jobs:
         run: pytest tests.py
 
       - name: Destroy test-db container
-        run: docker compose -f docker-compose.test.yml down --remove-orphans --volumes
+        run: docker compose -f docker-compose.test.yml down --remove-orphans
 
       - name: Clean .env
         run: rm ./.env
