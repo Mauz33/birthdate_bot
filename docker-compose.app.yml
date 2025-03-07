@@ -12,6 +12,7 @@ services:
       interval: 5s
       retries: 5
     volumes:
+      - ./backup_1.sql:/docker-entrypoint-initdb.d/backup_1.sql
       - habrdb-data:/var/lib/postgresql/data
   bot:
     build:
