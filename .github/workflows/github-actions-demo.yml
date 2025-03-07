@@ -36,10 +36,16 @@ jobs:
         run: pytest tests.py
 
       - name: Destroy test-db container
-        run: docker compose -f docker-compose.test.yml down
+        run: docker compose -f docker-compose.test.yml down --remove-orphans --volumes
 
       - name: Clean .env
         run: rm ./.env
+
+      - name: Cleanup docker resources
+        run: |
+          docker network prune -f   # Только неиспользуемые сети
+          docker volume prune -f    # Только неиспользуемые volumes
+          docker image prune -f     # Только неиспользуемые образы (без контейнеров)
 
   BuildAndRun:
     runs-on: self-hosted
