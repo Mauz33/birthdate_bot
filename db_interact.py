@@ -182,7 +182,7 @@ async def get_none_notified_birthdate_in_interval(db_instance: DBService, interv
     # TODO: проверить на правильность дату исключение
     current_date = f"{current_date}" if current_date else None
 
-    additional_where_birth_date_id = f"where d.id = %s" if birth_date_id else None
+    additional_where_birth_date_id = f"where d.id = %s" if birth_date_id else ''
 
     tuple_args = (current_date, current_date, current_date,)
     if birth_date_id:
