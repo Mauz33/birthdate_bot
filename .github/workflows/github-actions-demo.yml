@@ -53,6 +53,6 @@ jobs:
           echo "OUTER_PORT=${{ secrets.POSTGRES_OUTER_PORT }}" >> .env
           echo "INTERNAL_PORT=${{ secrets.POSTGRES_INTERNAL_PORT }}" >> .env
       - name: Down active app
-        run: docker compose -f .\docker-compose.app.yml down
+        run: docker compose -f ./docker-compose.app.yml down
       - name: Compose whole app
-        run: docker compose -f .\docker-compose.app.yml up
+        run: docker compose -f ./docker-compose.app.yml up
