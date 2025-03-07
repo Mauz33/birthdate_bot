@@ -3,15 +3,25 @@ from telegram.ext import ContextTypes, ConversationHandler
 
 from db_interact import reg_user, get_births_by_chat_id, delete_birth_row, check_is_user_own_row, add_birth, \
     get_rows_the_next_n_days, \
-    get_db_instance, DBService, get_none_notified_birthdate_in_interval
+    get_db_instance, DBService, get_none_notified_birthdate_in_interval, configure_db_instance
 from key_boards import markup, cancel_markup
 from notification_service import generate_messages_per_user_id, send_notifications
 from utils import is_int, is_valid_date, generate_own_birth_dates_info, generate_next_30_days_info
 
-MENU, INPUT_DATE, INPUT_CELEBRANT, CONFIRMATION, DELETE_BIRTH = range(5)
+import os
+from dotenv import load_dotenv
 
+load_dotenv()
+POSTGRES_USER = os.getenv('POSTGRES_USER')
+POSTGRES_PASSWORD = os.getenv('POSTGRES_PASSWORD')
+POSTGRES_DB = os.getenv('POSTGRES_DB')
+OUTER_PORT = os.getenv('OUTER_PORT')
+INTERNAL_PORT = os.getenv('INTERNAL_PORT')
+
+configure_db_instance(INTERNAL_PORT, POSTGRES_DB, POSTGRES_USER, POSTGRES_PASSWORD)
 db_instance: DBService = get_db_instance()
 
+MENU, INPUT_DATE, INPUT_CELEBRANT, CONFIRMATION, DELETE_BIRTH = range(5)
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await reg_user(db_instance=db_instance, chat_id=update.message.chat.id)
     await update.message.reply_text("Начало работы.", reply_markup=markup)

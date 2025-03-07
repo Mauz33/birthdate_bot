@@ -1,0 +1,30 @@
+services:
+  postgres:
+    image: postgres:17
+    container_name: postgres-bot
+    restart: always
+    env_file:
+      - .env
+    ports:
+      - "${OUTER_PORT}:${INTERNAL_PORT}"
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "${POSTGRES_USER}", "-d", "${POSTGRES_DB}"]
+      interval: 5s
+      retries: 5
+    volumes:
+      - ./backup_1.sql:/docker-entrypoint-initdb.d/backup_1.sql
+      - habrdb-data:/var/lib/postgresql/data
+  bot:
+    build:
+      context: .
+      dockerfile: bot.Dockerfile
+    container_name: tg-birth-bot
+    restart: always
+    env_file:
+      - .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  habrdb-data:

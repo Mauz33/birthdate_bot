@@ -1,5 +1,4 @@
 import logging
-from config import TOKEN
 
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ConversationHandler, \
@@ -8,6 +7,12 @@ from telegram.ext import Application, CommandHandler, MessageHandler, filters, C
 from handlers import start, show_panel_command, add_birth_command, get_all_rows, delete_birth, \
     get_list_of_the_next_30_days, input_date, input_celebrant, confirm, deny, execute_delete, cancel, \
     MENU, INPUT_DATE, INPUT_CELEBRANT, CONFIRMATION, DELETE_BIRTH
+
+import os
+from dotenv import load_dotenv
+load_dotenv()
+
+TOKEN = os.getenv('TG_TOKEN')
 
 # Enable logging
 logging.basicConfig(

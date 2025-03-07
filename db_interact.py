@@ -1,7 +1,5 @@
 import datetime
 from datetime import datetime as dt
-
-
 import psycopg2 as psycopg2
 
 from utils import convert_tuple_to_dict_with_custom_columns
@@ -41,14 +39,14 @@ class DBService:
 
 __db_instance: DBService = None
 
-def configure_db_instance():
+def configure_db_instance(internal_port: str, database: str, user: str, password: str):
     try:
         con_dict = {
-            "host": "localhost",
-            "port": "5432",
-            "database": "birth_bot",
-            "user": "postgres",
-            "password": "mysecretpassword"
+            "host": "postgres",
+            "port": internal_port,
+            "database": database,
+            "user": user,
+            "password": password
         }
         global __db_instance
         __db_instance = DBService(**con_dict)
@@ -59,7 +57,6 @@ def configure_db_instance():
 
 
 def get_db_instance():
-    configure_db_instance()
     if __db_instance:
         return __db_instance
     else:
@@ -193,7 +190,7 @@ async def get_none_notified_birthdate_in_interval(db_instance: DBService, interv
     tuple_args += (current_date, current_date, interval_from, interval_to, interval_from, interval_to,)
 
     fetched_non_notified_dates_in_interval = db_instance.fetch_all(
-        """
+        f"""
             WITH dates as (
             select
             d.id,
@@ -208,6 +205,7 @@ async def get_none_notified_birthdate_in_interval(db_instance: DBService, interv
                       end, d.month::int, d.day::int
             ) as nearest_date
             FROM date_of_births as d
+            {additional_where_birth_date_id}
         )
         
         SELECT DISTINCT

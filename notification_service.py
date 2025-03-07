@@ -1,6 +1,5 @@
 import asyncio
 from datetime import datetime
-from config import TOKEN
 
 from telegram import Bot
 from telegram.error import TimedOut, NetworkError, RetryAfter
@@ -9,6 +8,12 @@ from db_interact import save_notification, get_none_notified_birthdate_in_interv
     fill_last_launch_log, DBService, get_db_instance
 
 import logging
+
+import os
+from dotenv import load_dotenv
+load_dotenv()
+
+TOKEN = os.getenv('TG_TOKEN')
 
 async def send_notifications(db_instance: DBService, notifications: dict[str, list[dict]]):
     retries = 5

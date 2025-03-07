@@ -3,7 +3,7 @@ import utils
 
 from datetime import datetime, timedelta
 from db_interact import DBService, check_is_user_own_row, get_rows_the_next_n_days, get_births_by_chat_id, \
-    get_none_notified_birthdate_in_interval, save_notification, get_missed_births
+    get_none_notified_birthdate_in_interval, save_notification, get_missed_births, configure_db_instance, get_db_instance
 import pytest
 
 import os
@@ -15,19 +15,12 @@ POSTGRES_PASSWORD = os.getenv('POSTGRES_PASSWORD')
 POSTGRES_DB = os.getenv('POSTGRES_DB')
 OUTER_PORT = os.getenv('OUTER_PORT')
 
-con_dict = {
-    "host": "localhost",
-    "port": OUTER_PORT,
-    "database": POSTGRES_DB,
-    "user": POSTGRES_USER,
-    "password": POSTGRES_PASSWORD
-}
-
 @pytest.fixture(scope="session")
 def db_connection():
     try:
         """Фикстура устанавливает соединение с тестовой базой."""
-        db_service: DBService = DBService(**con_dict)
+        configure_db_instance(OUTER_PORT, POSTGRES_DB, POSTGRES_USER, POSTGRES_PASSWORD)
+        db_service: DBService = get_db_instance()
 
         # cur.execute(""" insert into users (chat_id)
         #                 values (%s)
