@@ -42,7 +42,7 @@ __db_instance: DBService = None
 def configure_db_instance(internal_port: str, database: str, user: str, password: str):
     try:
         con_dict = {
-            "host": "postgres",
+            "host": "localhost",
             "port": internal_port,
             "database": database,
             "user": user,
