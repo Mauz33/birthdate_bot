@@ -52,6 +52,7 @@ jobs:
           echo "POSTGRES_DB=${{ secrets.POSTGRES_DB_NAME }}" >> .env
           echo "OUTER_PORT=${{ secrets.POSTGRES_OUTER_PORT }}" >> .env
           echo "INTERNAL_PORT=${{ secrets.POSTGRES_INTERNAL_PORT }}" >> .env
+          echo "TG_TOKEN=${{ secrets.TG_TOKEN }}" >> .env
       - name: Down active app
         run: docker compose -f ./docker-compose.app.yml down
       - name: Compose whole app
