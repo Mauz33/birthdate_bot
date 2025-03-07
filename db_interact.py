@@ -39,10 +39,10 @@ class DBService:
 
 __db_instance: DBService = None
 
-def configure_db_instance(internal_port: str, database: str, user: str, password: str):
+def configure_db_instance(internal_port: str, database: str, user: str, password: str, host: str = "localhost"):
     try:
         con_dict = {
-            "host": "localhost",
+            "host": host,
             "port": internal_port,
             "database": database,
             "user": user,
