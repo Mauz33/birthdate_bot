@@ -12,7 +12,7 @@ services:
       interval: 5s
       retries: 5
     volumes:
-      - habrdb-data:/var/lib/postgresql/data
+      - /var/lib/docker/volumes/birthdate_bot_habrdb-data:/var/lib/postgresql/data
   bot:
     build:
       context: .
