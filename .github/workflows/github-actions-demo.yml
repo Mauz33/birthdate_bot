@@ -57,3 +57,5 @@ jobs:
         run: docker compose -f ./docker-compose.app.yml down
       - name: Compose whole app
         run: docker compose -f ./docker-compose.app.yml up -d
+      - name: debug
+        run: docker volume inspect birthdate_bot_habrdb-data
