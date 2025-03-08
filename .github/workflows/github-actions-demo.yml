@@ -18,7 +18,7 @@ jobs:
           echo "INTERNAL_PORT=${{ secrets.POSTGRES_INTERNAL_PORT }}" >> .env
           
       - name: Docker compose down
-        run: docker compose -f docker-compose.test.yml up -d
+        run: docker compose -f docker-compose.test.yml down
       
       - name: Docker compose Postgres for testing
         run: docker compose -f docker-compose.test.yml up -d
