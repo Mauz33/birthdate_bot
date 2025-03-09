@@ -1,11 +1,11 @@
 import asyncio
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from telegram import Bot
 from telegram.error import TimedOut, NetworkError, RetryAfter
 
 from db_interact import save_notification, get_none_notified_birthdate_in_interval, get_missed_births, \
-    fill_last_launch_log, DBService, get_db_instance
+    fill_last_launch_log, DBService, get_db_instance, configure_db_instance
 
 import logging
 
@@ -73,6 +73,8 @@ async def process_birth_dates(db_instance: DBService, interval_from: int, interv
 
 
 async def process_missed_birth_dates(db_instance: DBService):
+    logging.info("Обработка пропущенных дат")
+
     grouped = await get_missed_births(db_instance=db_instance)
     missed = generate_missed_messages_per_user_id(grouped)
     await send_notifications(db_instance=db_instance, notifications=missed)
@@ -92,6 +94,7 @@ def generate_missed_messages_per_user_id(grouped):
     return notifications
 
 async def process_all_intervals(db_instance: DBService):
+    logging.info("Обработка наступающих дат")
     intervals = [[0, 0], [1, 3], [4, 7], [8, 14]]
     for interval in intervals:
         await process_birth_dates(db_instance=db_instance, interval_from=interval[0], interval_to=interval[1])
@@ -100,16 +103,29 @@ async def process_all_intervals(db_instance: DBService):
 logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s - %(levelname)s - %(message)s')
 async def main():
+    POSTGRES_USER = os.getenv('POSTGRES_USER')
+    POSTGRES_PASSWORD = os.getenv('POSTGRES_PASSWORD')
+    POSTGRES_DB = os.getenv('POSTGRES_DB')
+    OUTER_PORT = os.getenv('OUTER_PORT')
+    INTERNAL_PORT = os.getenv('INTERNAL_PORT')
+
+    configure_db_instance(INTERNAL_PORT, POSTGRES_DB, POSTGRES_USER, POSTGRES_PASSWORD, "postgres")
     db_instance = get_db_instance()
 
-    logging.info("Обработка пропущенных дат")
+
     await process_missed_birth_dates(db_instance=db_instance)
 
-    logging.info("Обработка наступающих дат")
+
     await process_all_intervals(db_instance=db_instance)
 
     logging.info("Заполнение последнего успешного запуска")
     await fill_last_launch_log(db_instance=db_instance)
+
+    now = datetime.now()
+    next_hour = (now + timedelta(hours=1)).replace(minute=0, second=0, microsecond=0)
+    sec = int((next_hour - now).total_seconds())
+    await asyncio.sleep(sec)
+
 
 
 if __name__ == "__main__":
