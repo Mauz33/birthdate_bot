@@ -2,7 +2,7 @@ from __future__ import annotations
 import utils
 
 from datetime import datetime, timedelta
-from db_interact import DBService, check_is_user_own_row, get_rows_the_next_n_days, get_births_by_chat_id, \
+from db.db_interact import DBService, check_is_user_own_row, get_rows_the_next_n_days, get_births_by_chat_id, \
     get_none_notified_birthdate_in_interval, save_notification, get_missed_births, configure_db_instance, get_db_instance
 import pytest
 

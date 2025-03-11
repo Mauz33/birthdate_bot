@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from telegram import Bot
 from telegram.error import TimedOut, NetworkError, RetryAfter
 
-from db_interact import save_notification, get_none_notified_birthdate_in_interval, get_missed_births, \
+from db.db_interact import save_notification, get_none_notified_birthdate_in_interval, get_missed_births, \
     fill_last_launch_log, DBService, get_db_instance, configure_db_instance
 
 import logging
@@ -108,8 +108,9 @@ async def main():
     POSTGRES_DB = os.getenv('POSTGRES_DB')
     OUTER_PORT = os.getenv('OUTER_PORT')
     INTERNAL_PORT = os.getenv('INTERNAL_PORT')
+    POSTGRES_DB_SERVICE_NAME = os.getenv('POSTGRES_DB_SERVICE_NAME')
 
-    configure_db_instance(INTERNAL_PORT, POSTGRES_DB, POSTGRES_USER, POSTGRES_PASSWORD, "postgres")
+    configure_db_instance(INTERNAL_PORT, POSTGRES_DB, POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB_SERVICE_NAME)
     db_instance = get_db_instance()
 
 

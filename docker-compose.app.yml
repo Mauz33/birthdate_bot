@@ -13,11 +13,11 @@ services:
       retries: 5
     volumes:
       - db-data:/var/lib/postgresql/data
-      - ./backup_1.sql:/docker-entrypoint-initdb.d/backup_1.sql
+      - ./db/backup_1.sql:/docker-entrypoint-initdb.d/backup_1.sql
   bot:
     build:
       context: .
-      dockerfile: bot.Dockerfile
+      dockerfile: /conversation_bot/bot.Dockerfile
     container_name: tg-birth-bot
     restart: always
     env_file:
@@ -28,7 +28,7 @@ services:
   notifications:
     build:
       context: .
-      dockerfile: notifications.Dockerfile
+      dockerfile: ./notifications.Dockerfile
     container_name: notifications-container
     restart: always
     env_file:

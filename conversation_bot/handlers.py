@@ -1,14 +1,15 @@
 from telegram import Update, ReplyKeyboardRemove, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes, ConversationHandler
 
-from db_interact import reg_user, get_births_by_chat_id, delete_birth_row, check_is_user_own_row, add_birth, \
+from db.db_interact import reg_user, get_births_by_chat_id, delete_birth_row, check_is_user_own_row, add_birth, \
     get_rows_the_next_n_days, \
     get_db_instance, DBService, get_none_notified_birthdate_in_interval, configure_db_instance
-from key_boards import markup, cancel_markup
-from notification_service import generate_messages_per_user_id, send_notifications
+from conversation_bot.key_boards import markup, cancel_markup
+from notification_service.notification_service import generate_messages_per_user_id, send_notifications
 from utils import is_int, is_valid_date, generate_own_birth_dates_info, generate_next_30_days_info
 
 import os
+import logging
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -17,8 +18,9 @@ POSTGRES_PASSWORD = os.getenv('POSTGRES_PASSWORD')
 POSTGRES_DB = os.getenv('POSTGRES_DB')
 OUTER_PORT = os.getenv('OUTER_PORT')
 INTERNAL_PORT = os.getenv('INTERNAL_PORT')
+POSTGRES_DB_SERVICE_NAME = os.getenv('POSTGRES_DB_SERVICE_NAME')
 
-configure_db_instance(INTERNAL_PORT, POSTGRES_DB, POSTGRES_USER, POSTGRES_PASSWORD, "postgres")
+configure_db_instance(INTERNAL_PORT, POSTGRES_DB, POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB_SERVICE_NAME)
 db_instance: DBService = get_db_instance()
 
 MENU, INPUT_DATE, INPUT_CELEBRANT, CONFIRMATION, DELETE_BIRTH = range(5)

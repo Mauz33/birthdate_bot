@@ -4,7 +4,7 @@ from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ConversationHandler, \
     CallbackQueryHandler
 
-from handlers import start, show_panel_command, add_birth_command, get_all_rows, delete_birth, \
+from conversation_bot.handlers import start, show_panel_command, add_birth_command, get_all_rows, delete_birth, \
     get_list_of_the_next_30_days, input_date, input_celebrant, confirm, deny, execute_delete, cancel, \
     MENU, INPUT_DATE, INPUT_CELEBRANT, CONFIRMATION, DELETE_BIRTH
 

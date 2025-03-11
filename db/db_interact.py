@@ -1,4 +1,6 @@
 import datetime
+import logging
+import sys
 from datetime import datetime as dt
 import psycopg2 as psycopg2
 
@@ -48,13 +50,14 @@ def configure_db_instance(internal_port: str, database: str, user: str, password
             "user": user,
             "password": password
         }
+
         global __db_instance
         __db_instance = DBService(**con_dict)
-        print("Database connected successfully")
+        logging.info("Database connected successfully")
 
-    except:
-        print("Database not connected successfully")
-
+    except Exception as e:
+        logging.info("Database not connected successfully")
+        logging.info(e)
 
 def get_db_instance():
     if __db_instance:
