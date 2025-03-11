@@ -12,4 +12,4 @@ services:
       interval: 5s
       retries: 5
     volumes:
-      - ./db/backup_1.sql:/docker-entrypoint-initdb.d/backup_1.sql
+      - ./db/init_script/01_backup_1.sql:/docker-entrypoint-initdb.d/01_backup_1.sql

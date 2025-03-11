@@ -7,9 +7,6 @@
 
 -- Started on 2025-03-04 23:12:12 UTC
 
-CREATE DATABASE IF NOT EXISTS birth_bot;
-\c birth_bot
-
 SET statement_timeout = 0;
 SET lock_timeout = 0;
 SET idle_in_transaction_session_timeout = 0;

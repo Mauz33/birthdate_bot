@@ -11,7 +11,6 @@ jobs:
 
       - name: Create .env file
         run: |
-          cd tests
           echo "POSTGRES_DB_SERVICE_NAME=postgres" > .env
           echo "POSTGRES_USER=${{ secrets.POSTGRES_USER }}" >> .env
           echo "POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}" >> .env
@@ -20,10 +19,10 @@ jobs:
           echo "INTERNAL_PORT=${{ secrets.POSTGRES_INTERNAL_PORT }}" >> .env
           
       - name: Docker compose down
-        run: docker compose -f ./tests/docker-compose.test.yml down
+        run: docker compose -f ./docker-compose.test.yml down
       
       - name: Docker compose Postgres for testing
-        run: docker compose -f ./tests/docker-compose.test.yml up -d
+        run: docker compose -f ./docker-compose.test.yml up -d
 
   Testing:
     runs-on: self-hosted
@@ -41,7 +40,7 @@ jobs:
         run: pytest ./tests/tests.py
 
       - name: Destroy test-db container
-        run: docker compose -f docker-compose.test.yml down
+        run: docker compose -f ./docker-compose.test.yml down
 
       - name: Clean .env
         run: rm ./.env

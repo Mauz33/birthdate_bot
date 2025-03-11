@@ -13,7 +13,7 @@ services:
       retries: 5
     volumes:
       - db-data:/var/lib/postgresql/data
-      - ./db/backup_1.sql:/docker-entrypoint-initdb.d/backup_1.sql
+      - ./db/init_script:/docker-entrypoint-initdb.d
   bot:
     build:
       context: .
