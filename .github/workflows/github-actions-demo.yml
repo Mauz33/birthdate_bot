@@ -37,7 +37,7 @@ jobs:
         run: pip install -r requirements.txt
         
       - name: Run Tests
-        run: pytest ./tests/tests.py
+        run: PYTHONPATH=$(pwd) python tests/tests.py
 
       - name: Destroy test-db container
         run: docker compose -f ./docker-compose.test.yml down
