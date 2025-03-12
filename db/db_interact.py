@@ -154,7 +154,7 @@ async def get_rows_the_next_n_days(db_instance: DBService, chat_id: int, next_n_
         SELECT
             b.id,
             b.celebrant_name,
-            to_char(b.nearest_date, 'mm.dd.YYYY'),
+            to_char(b.nearest_date, 'dd.mm.YYYY'),
             b.nearest_date - COALESCE(%s::date, CURRENT_DATE) as days_until
         FROM births b
         where b.chat_id = %s AND nearest_date - COALESCE(%s::date, CURRENT_DATE) between 0 and %s
